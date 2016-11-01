@@ -1,3 +1,3 @@
-# DataSock
 
-Python environment to send data through socket connection to android app
+# DataSocks
+App to receive data from python server through sockets
