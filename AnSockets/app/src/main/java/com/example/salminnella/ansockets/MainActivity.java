@@ -21,7 +21,8 @@ import java.util.Collections;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "MainActivity";
+    private static final String TAG_MAIN_ACTIVITY = "MainActivity";
+
     // DEFAULT IP
     public static String SERVERIP = "10.0.2.15";
 
@@ -30,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView mainTextView;
     private TextView serverStatus;
-    private TextView thisIpTextView;
+//    private TextView thisIpTextView;
     private FloatingActionButton fab;
     private Handler handler = new Handler();
     private ServerSocket serverSocket;
@@ -53,9 +54,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        mainTextView = (TextView) findViewById(R.id.hello_text_view);
-        serverStatus = (TextView) findViewById(R.id.server_status_text_view);
-        thisIpTextView = (TextView) findViewById(R.id.this_ip_text_view);
+        mainTextView = (TextView) findViewById(R.id.main_hello_text_view);
+        serverStatus = (TextView) findViewById(R.id.main_server_status_text_view);
+//        thisIpTextView = (TextView) findViewById(R.id.main_this_ip_text_view);
     }
 
     private void initFab() {
