@@ -9,7 +9,13 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.TextView;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.util.Collections;
+import java.util.List;
 
 public class ClientSocketActivity extends AppCompatActivity {
     private static final String TAG_CLIENT_ACTIVITY = "ClientSocketActivity";
@@ -22,6 +28,7 @@ public class ClientSocketActivity extends AppCompatActivity {
 //    private TextView clientIpTextView;
     private Handler handler = new Handler();
     private Socket clientSocket;
+    private String clientIP;
 
 
     @Override
@@ -34,7 +41,10 @@ public class ClientSocketActivity extends AppCompatActivity {
         initViews();
         initFab();
 
+        clientIP = getLocalIpAddress(true);
 
+        Thread streamThread = new Thread(new ClientThread());
+        streamThread.start();
 
     }
 
@@ -61,6 +71,19 @@ public class ClientSocketActivity extends AppCompatActivity {
         @Override
         public void run() {
             try {
+                clientSocket = new Socket(SERVERIP, SERVERPORT);
+                clientServerStatusTextView.setText("ip is: " + clientIP);
+                InputStream is = clientSocket.getInputStream();
+
+                byte[] buffer = new byte[25];
+                int read = is.read(buffer);
+                while(read != -1){
+                    clientTextView.setText(read);
+                    read = is.read(buffer);
+                }
+
+                is.close();
+                clientSocket.close();
 
             } catch (Exception e) {
                 handler.post(new Runnable() {
@@ -73,6 +96,41 @@ public class ClientSocketActivity extends AppCompatActivity {
             }
         }
     }
+    // GETS THE IP ADDRESS OF YOUR PHONE'S NETWORK
+    private String getLocalIpAddress(boolean useIPv4) {
+        try {
+            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface intf : interfaces) {
+                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                for (InetAddress addr : addrs) {
+                    if (!addr.isLoopbackAddress()) {
+                        String sAddr = addr.getHostAddress();
+                        //boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
+                        boolean isIPv4 = sAddr.indexOf(':')<0;
 
+                        if (useIPv4) {
+                            if (isIPv4)
+                                return sAddr;
+                        } else {
+                            if (!isIPv4) {
+                                int delim = sAddr.indexOf('%'); // drop ip6 zone suffix
+                                return delim<0 ? sAddr.toUpperCase() : sAddr.substring(0, delim).toUpperCase();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) { } // for now eat exceptions
+        return "";
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            clientSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
