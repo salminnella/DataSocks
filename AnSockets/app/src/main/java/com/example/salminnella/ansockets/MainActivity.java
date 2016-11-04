@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
     public static String SERVERIP = "10.0.2.15";
 
     // DESIGNATE A PORT
-    public static final int SERVERPORT = 9999;
+    public static final int SERVERPORT = 8080;
 
     private TextView mainTextView;
     private TextView serverStatus;
