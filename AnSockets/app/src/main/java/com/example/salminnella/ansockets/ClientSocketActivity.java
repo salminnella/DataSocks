@@ -6,11 +6,19 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
@@ -19,7 +27,7 @@ import java.util.List;
 
 public class ClientSocketActivity extends AppCompatActivity {
     private static final String TAG_CLIENT_ACTIVITY = "ClientSocketActivity";
-    public static final int SERVERPORT = 9999;
+    public static final int SERVERPORT = 6667;
     public static String SERVERIP = "127.0.0.1";
 
     private FloatingActionButton clientFab;
@@ -29,6 +37,12 @@ public class ClientSocketActivity extends AppCompatActivity {
     private Handler handler = new Handler();
     private Socket clientSocket;
     private String clientIP;
+
+    private EditText serverIp;
+    private Button connectPhones;
+//    private String serverIpAddress = "172.17.58.30";
+    private String serverIpAddress = "127.0.0.1";
+    private boolean connected = false;
 
 
     @Override
@@ -43,8 +57,8 @@ public class ClientSocketActivity extends AppCompatActivity {
 
         clientIP = getLocalIpAddress(true);
 
-        Thread streamThread = new Thread(new ClientThread());
-        streamThread.start();
+//        Thread streamThread = new Thread(new ClientThread());
+//        streamThread.start();
 
     }
 
@@ -54,7 +68,25 @@ public class ClientSocketActivity extends AppCompatActivity {
 //        clientIpTextView = (TextView) findViewById(R.id.client_this_ip_text_view);
         clientFab = (FloatingActionButton) findViewById(R.id.fab);
 
+        serverIp = (EditText) findViewById(R.id.server_ip);
+        connectPhones = (Button) findViewById(R.id.connect_phones);
+        connectPhones.setOnClickListener(connectListener);
+
     }
+
+    private View.OnClickListener connectListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+            if (!connected) {
+                serverIpAddress = serverIp.getText().toString();
+                if (!serverIpAddress.equals("")) {
+                    Thread cThread = new Thread(new ConnectPythonThread());
+                    cThread.start();
+                }
+            }
+        }
+    };
 
     private void initFab() {
         clientFab.setOnClickListener(new View.OnClickListener() {
@@ -71,7 +103,7 @@ public class ClientSocketActivity extends AppCompatActivity {
         @Override
         public void run() {
             try {
-                clientSocket = new Socket(SERVERIP, SERVERPORT);
+                clientSocket = new Socket(SERVERIP, MainActivity.SERVERPORT);
                 clientServerStatusTextView.setText("ip is: " + clientIP);
                 InputStream is = clientSocket.getInputStream();
 
@@ -96,6 +128,80 @@ public class ClientSocketActivity extends AppCompatActivity {
             }
         }
     }
+
+    public class ConnectPythonThread implements Runnable {
+
+        public void run() {
+            try {
+//                InetAddress serverAddr = InetAddress.getByName(serverIpAddress);
+                Log.d("ClientActivity", "C: Connecting...");
+//                Log.d("ClientActivity", "C: Connecting..." + serverAddr.toString());
+                clientSocket = new Socket("192.168.0.14", 8888);
+                connected = true;
+                int count = 1;
+                while (connected) {
+                    try {
+                        if (count == 1) {
+                        Log.d("ClientActivity", "C: Sending command.");
+                        PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(clientSocket
+                                .getOutputStream())), true);
+                        // WHERE YOU ISSUE THE COMMANDS
+
+                            out.println("Hey Server!");
+                            Log.d("ClientActivity", "C: Sent.");
+                        }
+                        count += 1;
+                        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                        Log.d(TAG_CLIENT_ACTIVITY, "run: response = " + in.readLine());
+                        String line = null;
+                        while ((line = in.readLine()) != null) {
+                            Log.d("ServerActivity", line);
+                            final String finalLine = line;
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    clientTextView.setText(finalLine);
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                        Log.e("ClientActivity", "S: Error", e);
+                    }
+
+//                    try {
+//                        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+//                        String line = null;
+//                        while ((line = in.readLine()) != null) {
+//                            Log.d("ServerActivity", line);
+//                            final String finalLine = line;
+//                            handler.post(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    clientTextView.setText(finalLine);
+//                                }
+//                            });
+//                        }
+//                        break;
+//                    } catch (Exception e) {
+//                        handler.post(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                clientServerStatusTextView.setText("Oops. Connection interrupted.");
+//                            }
+//                        });
+//                        e.printStackTrace();
+//                    }
+                }
+//                clientSocket.close();
+//                Log.d("ClientActivity", "C: Closed.");
+            } catch (Exception e) {
+                Log.e("ClientActivity", "C: Error", e);
+                connected = false;
+            }
+        }
+    }
+
+
     // GETS THE IP ADDRESS OF YOUR PHONE'S NETWORK
     private String getLocalIpAddress(boolean useIPv4) {
         try {
@@ -127,10 +233,14 @@ public class ClientSocketActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        try {
-            clientSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (clientSocket != null) {
+            try {
+                clientSocket.close();
+                Log.d("ClientActivity", "C: Closed.");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
     }
 }

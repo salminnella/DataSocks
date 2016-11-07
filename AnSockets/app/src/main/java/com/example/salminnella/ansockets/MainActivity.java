@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton fab;
     private Handler handler = new Handler();
     private ServerSocket serverSocket;
+    private InetAddress ipAdd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,7 +86,9 @@ public class MainActivity extends AppCompatActivity {
 
                         }
                     });
-                    serverSocket = new ServerSocket(SERVERPORT);
+//                    serverSocket = new ServerSocket(SERVERPORT, 0, ipAdd);
+                    serverSocket = new ServerSocket();
+                    serverSocket.bind(new InetSocketAddress(SERVERIP, SERVERPORT));
                     while (true) {
                         // LISTEN FOR INCOMING CLIENTS
                         Socket client = serverSocket.accept();
@@ -140,26 +144,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-
-
-
     // GETS THE IP ADDRESS OF YOUR PHONE'S NETWORK
-    private String getLocalIpAddress(boolean useIPv4) {
+//    private String getLocalIpAddress() {
 //        try {
 //            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
 //                NetworkInterface intf = en.nextElement();
 //                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
 //                    InetAddress inetAddress = enumIpAddr.nextElement();
-////                    if (!inetAddress.isLoopbackAddress()) { return inetAddress.getCanonicalHostName().toString(); }
-//                    if (!inetAddress.isLoopbackAddress() && InetAddressUtils.isIPv4Address(ipv4 = inetAddress.getHostAddress())) {
-//
-//                        String ip = inetAddress.getHostAddress().toString();
-//                        System.out.println("ip---::" + ip);
-//                        EditText tv = (EditText) findViewById(R.id.ipadd);
-//                        tv.setText(ip);
-//                        // return inetAddress.getHostAddress().toString();
-//                        return ip;
+//                    if (!inetAddress.isLoopbackAddress()) {
+//                        Log.d("MainActivity", "getLocalIpAddress: " + inetAddress.getHostAddress().toString());
+//                        return inetAddress.getHostAddress().toString();
 //                    }
 //                }
 //            }
@@ -167,8 +161,12 @@ public class MainActivity extends AppCompatActivity {
 //            Log.e("ServerActivity", ex.toString());
 //        }
 //        return null;
+//    }
 
 
+
+    // GETS THE IP ADDRESS OF YOUR PHONE'S NETWORK
+    private String getLocalIpAddress(boolean useIPv4) {
         try {
             List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
             for (NetworkInterface intf : interfaces) {
@@ -176,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
                 for (InetAddress addr : addrs) {
                     if (!addr.isLoopbackAddress()) {
                         String sAddr = addr.getHostAddress();
+                        ipAdd = addr;
                         //boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
                         boolean isIPv4 = sAddr.indexOf(':')<0;
 
@@ -198,11 +197,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        try {
-            serverSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (serverSocket != null) {
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
     }
 
 }
