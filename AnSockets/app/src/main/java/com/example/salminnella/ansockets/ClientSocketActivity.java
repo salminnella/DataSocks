@@ -11,13 +11,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -81,7 +82,7 @@ public class ClientSocketActivity extends AppCompatActivity {
             if (!connected) {
                 serverIpAddress = serverIp.getText().toString();
                 if (!serverIpAddress.equals("")) {
-                    Thread cThread = new Thread(new ConnectPythonThread());
+                    Thread cThread = new Thread(new ReceiveServerMessage());
                     cThread.start();
                 }
             }
@@ -96,6 +97,46 @@ public class ClientSocketActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+    }
+
+    public class ReceiveServerMessage implements Runnable {
+
+        @Override
+        public void run() {
+            try {
+                Socket socket = new Socket("192.168.0.14", 8888);
+                Log.d("ClientActivity", "C: Connecting...");
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                out.println("messages to you");
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                String response = in.readLine();
+                Log.d(TAG_CLIENT_ACTIVITY, "run: " + response);
+
+                String line;
+                while ((line = in.readLine()) != null) {
+                            Log.d("ServerActivity", line);
+                            final String finalLine = line;
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+//                                    clientTextView.setText(finalLine);
+                                    Log.d(TAG_CLIENT_ACTIVITY, "run: " + finalLine);
+                                    Toast.makeText(ClientSocketActivity.this, "" + finalLine, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+
+                socket.close();
+            } catch (Exception e) {
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        clientServerStatusTextView.setText("Error");
+                    }
+                });
+                e.printStackTrace();
+            }
+        }
     }
 
     public class ClientThread implements Runnable {
@@ -136,40 +177,29 @@ public class ClientSocketActivity extends AppCompatActivity {
 //                InetAddress serverAddr = InetAddress.getByName(serverIpAddress);
                 Log.d("ClientActivity", "C: Connecting...");
 //                Log.d("ClientActivity", "C: Connecting..." + serverAddr.toString());
+
+                DataOutputStream dataOutputStream = null;
+                DataInputStream dataInputStream = null;
+                String response = "";
                 clientSocket = new Socket("192.168.0.14", 8888);
+                dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+                dataInputStream = new DataInputStream(clientSocket.getInputStream());
                 connected = true;
                 int count = 1;
-                while (connected) {
-                    try {
-                        if (count == 1) {
-                        Log.d("ClientActivity", "C: Sending command.");
-                        PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(clientSocket
-                                .getOutputStream())), true);
-                        // WHERE YOU ISSUE THE COMMANDS
-
-                            out.println("Hey Server!");
-                            Log.d("ClientActivity", "C: Sent.");
-                        }
-                        count += 1;
-                        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                        Log.d(TAG_CLIENT_ACTIVITY, "run: response = " + in.readLine());
-                        String line = null;
-                        while ((line = in.readLine()) != null) {
-                            Log.d("ServerActivity", line);
-                            final String finalLine = line;
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    clientTextView.setText(finalLine);
-                                }
-                            });
-                        }
-                    } catch (Exception e) {
-                        Log.e("ClientActivity", "S: Error", e);
-                    }
-
+                while (count == 1) {
 //                    try {
+//                        if (count == 1) {
+//                            Log.d("ClientActivity", "C: Sending command.");
+//                            dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+//                            dataInputStream = new DataInputStream(clientSocket.getInputStream());
+//                            dataOutputStream.writeUTF("Hey Server!");
+//                            Log.d("ClientActivity", "C: Sent.");
+//                            response = dataInputStream.readUTF();
+//                            Log.d(TAG_CLIENT_ACTIVITY, "response = " + response);
+//                        }
+//                        count += 1;
 //                        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+//                        Log.d(TAG_CLIENT_ACTIVITY, "run: response = " + in.readLine());
 //                        String line = null;
 //                        while ((line = in.readLine()) != null) {
 //                            Log.d("ServerActivity", line);
@@ -181,16 +211,34 @@ public class ClientSocketActivity extends AppCompatActivity {
 //                                }
 //                            });
 //                        }
-//                        break;
 //                    } catch (Exception e) {
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                clientServerStatusTextView.setText("Oops. Connection interrupted.");
-//                            }
-//                        });
-//                        e.printStackTrace();
+//                        Log.e("ClientActivity", "S: Error", e);
 //                    }
+
+                    try {
+                        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                        String line = null;
+                        while ((line = in.readLine()) != null) {
+                            Log.d("ServerActivity", line);
+                            final String finalLine = line;
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    clientTextView.setText(finalLine);
+                                }
+                            });
+                        }
+                        count += 1;
+                        break;
+                    } catch (Exception e) {
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                clientServerStatusTextView.setText("Oops. Connection interrupted.");
+                            }
+                        });
+                        e.printStackTrace();
+                    }
                 }
 //                clientSocket.close();
 //                Log.d("ClientActivity", "C: Closed.");
