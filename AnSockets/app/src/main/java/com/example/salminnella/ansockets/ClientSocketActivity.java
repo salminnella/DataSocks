@@ -104,28 +104,25 @@ public class ClientSocketActivity extends AppCompatActivity {
         @Override
         public void run() {
             try {
-                Socket socket = new Socket("192.168.0.14", 8888);
+                Socket socket = new Socket("192.168.0.14", 8890);
                 Log.d("ClientActivity", "C: Connecting...");
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                out.println("messages to you");
+                out.println("hey server!");
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 String response = in.readLine();
                 Log.d(TAG_CLIENT_ACTIVITY, "run: " + response);
-
-                String line;
-                while ((line = in.readLine()) != null) {
-                            Log.d("ServerActivity", line);
-                            final String finalLine = line;
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-//                                    clientTextView.setText(finalLine);
-                                    Log.d(TAG_CLIENT_ACTIVITY, "run: " + finalLine);
-                                    Toast.makeText(ClientSocketActivity.this, "" + finalLine, Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-
+                    while (response != null) {
+                        Log.d("ServerActivity", response);
+                        final String finalResponse = response;
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                clientTextView.setText(finalResponse);
+                                Log.d(TAG_CLIENT_ACTIVITY, "run: " + finalResponse);
+                                Toast.makeText(ClientSocketActivity.this, "" + finalResponse, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
                 socket.close();
             } catch (Exception e) {
                 handler.post(new Runnable() {
